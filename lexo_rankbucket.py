@@ -18,21 +18,21 @@ class LexoRankBucket(object):
     @classmethod
     def BUCKET_0(self):
         if self._BUCKET_0 is None:
-            self._BUCKET_0 = self('0')
+            self._BUCKET_0 = LexoRankBucket('0')
 
         return self._BUCKET_0
 
     @classmethod
     def BUCKET_1(self):
         if self._BUCKET_1 is None:
-            self._BUCKET_1 = self('1')
+            self._BUCKET_1 = LexoRankBucket('1')
 
         return self._BUCKET_1
 
     @classmethod
     def BUCKET_2(self):
         if self._BUCKET_2 is None:
-            self._BUCKET_2 = self('2')
+            self._BUCKET_2 = LexoRankBucket('2')
 
         return self._BUCKET_2
 
@@ -74,6 +74,10 @@ class LexoRankBucket(object):
 
     def __init__(self, val):
         self.value = LexoInteger.parse(val, self.NUMERAL_SYSTEM())
+
+    def __repr__(self):
+        value = "LexoRankBucket [value: {}]".format(self.value)
+        return value
 
     def format(self):
         return self.value.format()

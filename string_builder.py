@@ -5,7 +5,8 @@ logger = logging.getLogger(__name__)
 
 class StringBuilder(object):
 
-    def __init__(self, str = ''):
+    def __init__(self, str=''):
+        logger.info(f"StringBuilder.constructor(str: {str})")
         self.str = str
 
     def getLength(self):
@@ -19,13 +20,14 @@ class StringBuilder(object):
         return self
 
     def remove(self, startIndex, length):
-        self.str = self.str[0:startIndex] + self.str[startIndex + length]
+        self.str = self.str[0:startIndex] + self.str[startIndex + length:]
         return self
 
     def insert(self, index, value):
-        self.str = self.str[0:index] + value + self.str[index]
+        logger.info(f"StringBuilder.insert(index: {index}, value: {value})")
+
+        self.str = self.str[0:index] + value + self.str[index:]
         return self
 
     def toString(self):
         return self.str
-

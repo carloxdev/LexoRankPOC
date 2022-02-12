@@ -1,6 +1,6 @@
 
 from lexo_integer import LexoInteger
-# from string_builder import StringBuilder
+from string_builder import StringBuilder
 
 import logging
 
@@ -21,10 +21,10 @@ class LexoDecimal(object):
             raise ValueError(f"More than one {system.getRadixPointChar()}")
 
         if partialIndex < 0:
-            return LexoDecimal.make(LexoInteger.parse(str, system), 0)
+            lexoDecimalObj = LexoDecimal.make(LexoInteger.parse(str, system), 0)
+            return lexoDecimalObj
 
-        import pdb; pdb.set_trace()
-        intStr = str[0, partialIndex] + str[partialIndex+1]
+        intStr = str[0, partialIndex] + str[partialIndex + 1]
         return self.make(
             LexoInteger.parse(intStr, system),
             len(str) - 1 - partialIndex
@@ -37,59 +37,117 @@ class LexoDecimal(object):
     @classmethod
     def make(self, integer, sig):
         if integer.isZero():
-            return self(integer, 0)
+            return LexoDecimal(integer, 0)
 
         zeroCount = 0
         i = 0
+
         while(i < sig and integer.getMag(i) == 0):
             zeroCount += 1
             i += 1
 
         newInteger = integer.shiftRight(zeroCount)
         newSig = sig - zeroCount
-        return self(newInteger, newSig)
+        return LexoDecimal(newInteger, newSig)
 
     def __init__(self, mag, sig):
         self.mag = mag
         self.sig = sig
 
+    def __repr__(self):
+        value = "LexoDecimal [mag: {}, sig: {}]"
+        value = value.format(
+            self.mag,
+            self.sig
+        )
+        return value
+
     def getSystem(self):
         return self.mag.getSystem()
 
-    # def add(self, other):
-    #     tmag = self.mag
-    #     tsig = self.sig
-    #     omag = other.mag
-    #     osig = None
+    def format(self):
+        logger.info("--> LexoDecimal.format()")
 
-        # for (osig = other.sig; tsig < osig; ++tsig) {
-        #     tmag = tmag.shiftLeft();
-        # }
+        intStr = self.mag.format()
+        if self.sig == 0:
+            logger.info(f"<-- LexoDecimal.format(): intStr: {intStr}")
+            return intStr
 
-        # while (tsig > osig) {
-        #     omag = omag.shiftLeft();
-        #     ++osig;
-        # }
-        # return LexoDecimal.make(tmag.add(omag), tsig);
+        sb = StringBuilder(intStr)
 
-    # subtract(self, other):
-    #     thisMag = self.mag;
-    #     thisSig = self.sig;
-    #     otherMag = other.mag;
-    #     otherSig = None
+        head = sb[0]
+        specialHead = head == self.mag.getSystem().getPositiveChar() or head == self.mag.getSystem().getNegativeChar()
+        if specialHead:
+            sb.remove(0, 1)
 
-    #     for (otherSig = other.sig; thisSig < otherSig; ++thisSig) {
-    #         thisMag = thisMag.shiftLeft();
-    #     }
-    #     while (thisSig > otherSig) {
-    #         otherMag = otherMag.shiftLeft();
-    #         ++otherSig;
-    #     }
-    #     return LexoDecimal.make(thisMag.subtract(otherMag), thisSig);
+        while (sb.getLength() < self.sig + 1):
+            sb.insert(0, self.mag.getSystem().toChar(0))
 
-    # multiply(other) {
-    #     return LexoDecimal.make(self.mag.multiply(other.mag), self.sig + other.sig);
-    # }
+        sb.insert(sb.getLength() - self.sig, self.mag.getSystem().getRadixPointChar())
+
+        if sb.getLength() - self.sig == 0:
+            sb.insert(0, self.mag.getSystem().toChar(0))
+
+        if specialHead:
+            sb.insert(0, head)
+
+        logger.info(f"<-- LexoDecimal.format(): sb.toString: {sb.toString()}")
+        return sb.toString()
+
+    def subtract(self, other):
+        thisMag = self.mag
+        thisSig = self.sig
+        otherMag = other.mag
+        otherSig = other.sig
+
+        while(thisSig < otherSig):
+            thisMag = thisMag.shiftLeft()
+            thisSig += 1
+
+        while (thisSig > otherSig):
+            otherMag = otherMag.shiftLeft()
+            otherSig += 1
+
+        return LexoDecimal.make(thisMag.subtract(otherMag), thisSig)
+
+    def compareTo(self, other):
+        if self == other:
+            return 0
+
+        if other is None:
+            return 1
+
+        tMag = self.mag
+        oMag = other.mag
+
+        if self.sig > other.sig:
+            oMag = oMag.shiftLeft(self.sig - other.sig)
+
+        elif self.sig < other.sig:
+            tMag = tMag.shiftLeft(other.sig - self.sig)
+
+        return tMag.compareTo(oMag)
+
+    def add(self, other):
+        tmag = self.mag
+        tsig = self.sig
+        omag = other.mag
+        osig = other.sig
+
+        while(tsig < osig):
+            tmag = tmag.shiftLeft()
+
+            tsig += 1
+
+        while (tsig > osig):
+            omag = omag.shiftLeft()
+            osig += 1
+
+        return LexoDecimal.make(tmag.add(omag), tsig)
+
+    def multiply(self, other):
+        return LexoDecimal.make(self.mag.multiply(other.mag), self.sig + other.sig)
+
     # floor() {
     #     return self.mag.shiftRight(self.sig);
     # }
@@ -111,23 +169,25 @@ class LexoDecimal(object):
     #     }
     #     return true;
     # }
-    # getScale() {
-    #     return self.sig;
-    # }
-    # setScale(nsig, ceiling = false) {
-    #     if (nsig >= self.sig) {
-    #         return this;
-    #     }
-    #     if (nsig < 0) {
-    #         nsig = 0;
-    #     }
-    #     const diff = self.sig - nsig;
-    #     let nmag = self.mag.shiftRight(diff);
-    #     if (ceiling) {
-    #         nmag = nmag.add(lexoInteger_1.LexoInteger.one(nmag.getSystem()));
-    #     }
-    #     return LexoDecimal.make(nmag, nsig);
-    # }
+
+    def getScale(self):
+        return self.sig
+
+    def setScale(self, nsig, ceiling=False):
+        if nsig >= self.sig:
+            return self
+
+        if nsig < 0:
+            nsig = 0
+
+        diff = self.sig - nsig
+        nmag = self.mag.shiftRight(diff)
+
+        if ceiling:
+            nmag = nmag.add(LexoInteger.one(nmag.getSystem()))
+
+        return LexoDecimal.make(nmag, nsig)
+
     # compareTo(other) {
     #     if (this === other) {
     #         return 0;
@@ -145,29 +205,7 @@ class LexoDecimal(object):
     #     }
     #     return tMag.compareTo(oMag);
     # }
-    # format() {
-    #     const intStr = self.mag.format();
-    #     if (self.sig === 0) {
-    #         return intStr;
-    #     }
-    #     const sb = new stringBuilder_1.default(intStr);
-    #     const head = sb[0];
-    #     const specialHead = head === self.mag.getSystem().getPositiveChar() || head === self.mag.getSystem().getNegativeChar();
-    #     if (specialHead) {
-    #         sb.remove(0, 1);
-    #     }
-    #     while (sb.length < self.sig + 1) {
-    #         sb.insert(0, self.mag.getSystem().toChar(0));
-    #     }
-    #     sb.insert(sb.length - self.sig, self.mag.getSystem().getRadixPointChar());
-    #     if (sb.length - self.sig === 0) {
-    #         sb.insert(0, self.mag.getSystem().toChar(0));
-    #     }
-    #     if (specialHead) {
-    #         sb.insert(0, head);
-    #     }
-    #     return sb.toString();
-    # }
+
     # equals(other) {
     #     if (this === other) {
     #         return true;

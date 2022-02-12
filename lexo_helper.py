@@ -11,13 +11,12 @@ def arrayCopy(
     length=None
 ):
     destination = destinationIndex
-
-    if length:
-        finalLength = sourceIndex + length
-    else:
-        finalLength = sourceIndex
+    finalLength = sourceIndex + length
 
     i = sourceIndex
-    while(i > finalLength):
+    while(i < finalLength):
         destinationArray[destination] = sourceArray[i]
         i += 1
+        destination += 1
+
+    logger.info("--")

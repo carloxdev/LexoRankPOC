@@ -9,7 +9,8 @@ class LexoNumeralSystem36(object):
         self.DIGITS = '0123456789abcdefghijklmnopqrstuvwxyz'
 
     def __repr__(self):
-        return f"LexoNumeralSystem36[{hex(id(self))}]"
+        value = "LexoNumeralSystem36"
+        return value
 
     def getBase(self):
         return 36
