@@ -13,36 +13,9 @@ class LexoRank(object):
     _ZERO_DECIMAL = None
     _MAX_DECIMAL = None
     _ONE_DECIMAL = None
-
-    @classmethod
-    def middle(self):
-        minLexoRank = self.min()
-        maxObj = self.max(minLexoRank.bucket)
-        lexorankObj = minLexoRank.between(maxObj)
-        return lexorankObj
-
-    @classmethod
-    def min(self):
-        logger.info("LexoRank.min()")
-        bucketObj = LexoRankBucket.BUCKET_0()
-        minLexDecimalObj = LexoRank.MIN_DECIMAL()
-        lexorankFromObj = self._from(bucketObj, minLexDecimalObj)
-
-        return lexorankFromObj
-
-    @classmethod
-    def MIN_DECIMAL(self):
-        if self._MIN_DECIMAL is None:
-            self._MIN_DECIMAL = LexoRank.ZERO_DECIMAL()
-
-        return self._MIN_DECIMAL
-
-    @classmethod
-    def ZERO_DECIMAL(self):
-        if self._ZERO_DECIMAL is None:
-            self._ZERO_DECIMAL = LexoDecimal.parse('0', LexoRank.NUMERAL_SYSTEM())
-
-        return self._ZERO_DECIMAL
+    _EIGHT_DECIMAL = None
+    _INITIAL_MIN_DECIMAL = None
+    _INITIAL_MAX_DECIMAL = None
 
     @classmethod
     def NUMERAL_SYSTEM(self):
@@ -52,67 +25,32 @@ class LexoRank(object):
         return self._NUMERAL_SYSTEM
 
     @classmethod
-    def _from(self, bucket, decimal):
-        if decimal.getSystem().getBase() != self.NUMERAL_SYSTEM().getBase():
-            raise ValueError('Expected different system')
+    def ZERO_DECIMAL(self):
+        if self._ZERO_DECIMAL is None:
+            self._ZERO_DECIMAL = LexoDecimal.parse('0', LexoRank.NUMERAL_SYSTEM())
 
-        obj = LexoRank(bucket, decimal)
-        return obj
-
-    @classmethod
-    def middleInternal(self, lbound, rbound, left, right):
-        mid = LexoRank.mid(left, right)
-        return LexoRank.checkMid(lbound, rbound, mid)
+        return self._ZERO_DECIMAL
 
     @classmethod
-    def checkMid(self, lbound, rbound, mid):
-        if lbound.compareTo(mid) >= 0:
-            return LexoRank.mid(lbound, rbound)
+    def ONE_DECIMAL(self):
+        if self._ONE_DECIMAL is None:
+            self._ONE_DECIMAL = LexoDecimal.parse('1', LexoRank.NUMERAL_SYSTEM())
 
-        return LexoRank.mid(lbound, rbound) if mid.compareTo(rbound) >= 0 else mid
-
-    @classmethod
-    def mid(self, left, right):
-        sum = left.add(right)
-        mid = sum.multiply(LexoDecimal.half(left.getSystem()))
-        scale = left.getScale() if left.getScale() > right.getScale() else right.getScale()
-
-        if mid.getScale() > scale:
-            roundDown = mid.setScale(scale, False)
-            if roundDown.compareTo(left) > 0:
-                return roundDown
-
-            roundUp = mid.setScale(scale, True)
-            if roundUp.compareTo(right) < 0:
-                return roundUp
-
-        return mid
+        return self._ONE_DECIMAL
 
     @classmethod
-    def formatDecimal(self, decimal):
-        formatVal = decimal.format()
-        val = StringBuilder(formatVal)
-        partialIndex = formatVal.find(LexoRank.NUMERAL_SYSTEM().getRadixPointChar())
+    def EIGHT_DECIMAL(self):
+        if self._EIGHT_DECIMAL is None:
+            self._EIGHT_DECIMAL = LexoDecimal.parse('8', LexoRank.NUMERAL_SYSTEM())
 
-        zero = LexoRank.NUMERAL_SYSTEM().toChar(0)
-        if partialIndex < 0:
-            partialIndex = len(formatVal)
-            val.append(LexoRank.NUMERAL_SYSTEM().getRadixPointChar())
-
-        while (partialIndex < 6):
-            val.insert(0, zero)
-            partialIndex += 1
-
-        while (val.str[val.getLength() - 1] == zero):
-            val.setLength(val.getLength() - 1)
-
-        logger.info(f"<-- LexoRank.formatDecimal(decimal: {decimal})")
-        return val.toString()
+        return self._EIGHT_DECIMAL
 
     @classmethod
-    def max(self, bucket=LexoRankBucket.BUCKET_0()):
-        lexorankMaxObj = LexoRank._from(bucket, LexoRank.MAX_DECIMAL())
-        return lexorankMaxObj
+    def MIN_DECIMAL(self):
+        if self._MIN_DECIMAL is None:
+            self._MIN_DECIMAL = LexoRank.ZERO_DECIMAL()
+
+        return self._MIN_DECIMAL
 
     @classmethod
     def MAX_DECIMAL(self):
@@ -122,11 +60,49 @@ class LexoRank(object):
         return self._MAX_DECIMAL
 
     @classmethod
-    def ONE_DECIMAL(self):
-        if self._ONE_DECIMAL is None:
-            self._ONE_DECIMAL = LexoDecimal.parse('1', LexoRank.NUMERAL_SYSTEM())
+    def MID_DECIMAL(self):
+        if self._MID_DECIMAL is None:
+            self._MID_DECIMAL = LexoRank.between(LexoRank.MIN_DECIMAL(), LexoRank.MAX_DECIMAL())
 
-        return self._ONE_DECIMAL
+        return self._MID_DECIMAL
+
+    @classmethod
+    def INITIAL_MIN_DECIMAL(self):
+        if self._INITIAL_MIN_DECIMAL is None:
+            self._INITIAL_MIN_DECIMAL = LexoDecimal.parse('100000', LexoRank.NUMERAL_SYSTEM())
+
+        return self._INITIAL_MIN_DECIMAL
+
+    @classmethod
+    def INITIAL_MAX_DECIMAL(self):
+        if self._INITIAL_MAX_DECIMAL is None:
+            self._INITIAL_MAX_DECIMAL = LexoDecimal.parse(LexoRank.NUMERAL_SYSTEM().toChar(LexoRank.NUMERAL_SYSTEM().getBase() - 2) + '00000', LexoRank.NUMERAL_SYSTEM())
+
+        return self._INITIAL_MAX_DECIMAL
+
+    @classmethod
+    def min(self):
+        bucketObj = LexoRankBucket.BUCKET_0()
+        minLexDecimalObj = LexoRank.MIN_DECIMAL()
+        lexorankFromObj = self._from(bucketObj, minLexDecimalObj)
+
+        return lexorankFromObj
+
+    @classmethod
+    def middle(self):
+        minLexoRank = self.min()
+        maxObj = self.max(minLexoRank.bucket)
+        lexorankObj = minLexoRank.between(maxObj)
+        return lexorankObj
+
+    @classmethod
+    def max(self, bucket=LexoRankBucket.BUCKET_0()):
+        lexorankMaxObj = LexoRank._from(bucket, LexoRank.MAX_DECIMAL())
+        return lexorankMaxObj
+
+    @classmethod
+    def initial(self, bucket):
+        return bucket == LexoRank._from(bucket, LexoRank.INITIAL_MIN_DECIMAL()) if LexoRankBucket.BUCKET_0() else LexoRank._from(bucket, LexoRank.INITIAL_MAX_DECIMAL())
 
     @classmethod
     def _between(self, oLeft, oRight):
@@ -184,6 +160,70 @@ class LexoRank(object):
 
         return mid
 
+    @classmethod
+    def parse(self, str):
+        parts = str.split('|')
+        bucket = LexoRankBucket._from(parts[0])
+        decimal = LexoDecimal.parse(parts[1], LexoRank.NUMERAL_SYSTEM())
+        return LexoRank(bucket, decimal)
+
+    @classmethod
+    def _from(self, bucket, decimal):
+        if decimal.getSystem().getBase() != self.NUMERAL_SYSTEM().getBase():
+            raise ValueError('Expected different system')
+
+        obj = LexoRank(bucket, decimal)
+        return obj
+
+    @classmethod
+    def middleInternal(self, lbound, rbound, left, right):
+        mid = LexoRank.mid(left, right)
+        return LexoRank.checkMid(lbound, rbound, mid)
+
+    @classmethod
+    def checkMid(self, lbound, rbound, mid):
+        if lbound.compareTo(mid) >= 0:
+            return LexoRank.mid(lbound, rbound)
+
+        return LexoRank.mid(lbound, rbound) if mid.compareTo(rbound) >= 0 else mid
+
+    @classmethod
+    def mid(self, left, right):
+        sum = left.add(right)
+        mid = sum.multiply(LexoDecimal.half(left.getSystem()))
+        scale = left.getScale() if left.getScale() > right.getScale() else right.getScale()
+
+        if mid.getScale() > scale:
+            roundDown = mid.setScale(scale, False)
+            if roundDown.compareTo(left) > 0:
+                return roundDown
+
+            roundUp = mid.setScale(scale, True)
+            if roundUp.compareTo(right) < 0:
+                return roundUp
+
+        return mid
+
+    @classmethod
+    def formatDecimal(self, decimal):
+        formatVal = decimal.format()
+        val = StringBuilder(formatVal)
+        partialIndex = formatVal.find(LexoRank.NUMERAL_SYSTEM().getRadixPointChar())
+
+        zero = LexoRank.NUMERAL_SYSTEM().toChar(0)
+        if partialIndex < 0:
+            partialIndex = len(formatVal)
+            val.append(LexoRank.NUMERAL_SYSTEM().getRadixPointChar())
+
+        while (partialIndex < 6):
+            val.insert(0, zero)
+            partialIndex += 1
+
+        while (val.str[val.getLength() - 1] == zero):
+            val.setLength(val.getLength() - 1)
+
+        return val.toString()
+
     def __init__(self, bucket, decimal):
         self.value = bucket.format() + '|' + self.formatDecimal(decimal)
         self.bucket = bucket
@@ -197,6 +237,30 @@ class LexoRank(object):
             self.decimal
         )
         return value
+
+    def genPrev(self):
+        if self.isMax():
+            return LexoRank(self.bucket, LexoRank.INITIAL_MAX_DECIMAL())
+
+        floorInteger = self.decimal.floor()
+        floorDecimal = LexoDecimal._from(floorInteger)
+        nextDecimal = floorDecimal.subtract(LexoRank.EIGHT_DECIMAL())
+        if nextDecimal.compareTo(LexoRank.MIN_DECIMAL()) <= 0:
+            nextDecimal = LexoRank.between(LexoRank.MIN_DECIMAL(), self.decimal)
+
+        return LexoRank(self.bucket, nextDecimal)
+
+    def genNext(self):
+        if self.isMin():
+            return LexoRank(self.bucket, LexoRank.INITIAL_MIN_DECIMAL())
+
+        ceilInteger = self.decimal.ceil()
+        ceilDecimal = LexoDecimal._from(ceilInteger)
+        nextDecimal = ceilDecimal.add(LexoRank.EIGHT_DECIMAL())
+        if nextDecimal.compareTo(LexoRank.MAX_DECIMAL()) >= 0:
+            nextDecimal = LexoRank.between(self.decimal, LexoRank.MAX_DECIMAL())
+
+        return LexoRank(self.bucket, nextDecimal)
 
     def between(self, other):
         if self.bucket.equals(other.bucket) is None:
@@ -218,3 +282,45 @@ class LexoRank(object):
 
         betweenObj = LexoRank._between(self.decimal, other.decimal)
         return LexoRank(self.bucket, betweenObj)
+
+    def getBucket(self):
+        return self.bucket
+
+    def getDecimal(self):
+        return self.decimal
+
+    def inNextBucket(self):
+        return LexoRank._from(self.bucket.next(), self.decimal)
+
+    def inPrevBucket(self):
+        return LexoRank._from(self.bucket.prev(), self.decimal)
+
+    def isMin(self):
+        return self.decimal.equals(LexoRank.MIN_DECIMAL())
+
+    def isMax(self):
+        return self.decimal.equals(LexoRank.MAX_DECIMAL())
+
+    def format(self):
+        return self.value
+
+    def equals(self, other):
+        if self == other:
+            return True
+
+        if other is None:
+            return False
+
+        return self.value == other.value
+
+    def toString(self):
+        return self.value
+
+    def compareTo(self, other):
+        if (self == other):
+            return 0
+
+        if other is None:
+            return 1
+
+        return self.value.localeCompare(other.value)

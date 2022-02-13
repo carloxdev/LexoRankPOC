@@ -6,7 +6,6 @@ logger = logging.getLogger(__name__)
 class StringBuilder(object):
 
     def __init__(self, str=''):
-        logger.info(f"StringBuilder.constructor(str: {str})")
         self.str = str
 
     def getLength(self):
@@ -24,8 +23,6 @@ class StringBuilder(object):
         return self
 
     def insert(self, index, value):
-        logger.info(f"StringBuilder.insert(index: {index}, value: {value})")
-
         self.str = self.str[0:index] + value + self.str[index:]
         return self
 

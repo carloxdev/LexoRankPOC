@@ -24,7 +24,7 @@ class LexoDecimal(object):
             lexoDecimalObj = LexoDecimal.make(LexoInteger.parse(str, system), 0)
             return lexoDecimalObj
 
-        intStr = str[0, partialIndex] + str[partialIndex + 1]
+        intStr = str[0:partialIndex] + str[partialIndex + 1:]
         return self.make(
             LexoInteger.parse(intStr, system),
             len(str) - 1 - partialIndex
@@ -65,69 +65,6 @@ class LexoDecimal(object):
     def getSystem(self):
         return self.mag.getSystem()
 
-    def format(self):
-        logger.info("--> LexoDecimal.format()")
-
-        intStr = self.mag.format()
-        if self.sig == 0:
-            logger.info(f"<-- LexoDecimal.format(): intStr: {intStr}")
-            return intStr
-
-        sb = StringBuilder(intStr)
-
-        head = sb[0]
-        specialHead = head == self.mag.getSystem().getPositiveChar() or head == self.mag.getSystem().getNegativeChar()
-        if specialHead:
-            sb.remove(0, 1)
-
-        while (sb.getLength() < self.sig + 1):
-            sb.insert(0, self.mag.getSystem().toChar(0))
-
-        sb.insert(sb.getLength() - self.sig, self.mag.getSystem().getRadixPointChar())
-
-        if sb.getLength() - self.sig == 0:
-            sb.insert(0, self.mag.getSystem().toChar(0))
-
-        if specialHead:
-            sb.insert(0, head)
-
-        logger.info(f"<-- LexoDecimal.format(): sb.toString: {sb.toString()}")
-        return sb.toString()
-
-    def subtract(self, other):
-        thisMag = self.mag
-        thisSig = self.sig
-        otherMag = other.mag
-        otherSig = other.sig
-
-        while(thisSig < otherSig):
-            thisMag = thisMag.shiftLeft()
-            thisSig += 1
-
-        while (thisSig > otherSig):
-            otherMag = otherMag.shiftLeft()
-            otherSig += 1
-
-        return LexoDecimal.make(thisMag.subtract(otherMag), thisSig)
-
-    def compareTo(self, other):
-        if self == other:
-            return 0
-
-        if other is None:
-            return 1
-
-        tMag = self.mag
-        oMag = other.mag
-
-        if self.sig > other.sig:
-            oMag = oMag.shiftLeft(self.sig - other.sig)
-
-        elif self.sig < other.sig:
-            tMag = tMag.shiftLeft(other.sig - self.sig)
-
-        return tMag.compareTo(oMag)
-
     def add(self, other):
         tmag = self.mag
         tsig = self.sig
@@ -145,30 +82,44 @@ class LexoDecimal(object):
 
         return LexoDecimal.make(tmag.add(omag), tsig)
 
+    def subtract(self, other):
+        thisMag = self.mag
+        thisSig = self.sig
+        otherMag = other.mag
+        otherSig = other.sig
+
+        while(thisSig < otherSig):
+            thisMag = thisMag.shiftLeft()
+            thisSig += 1
+
+        while (thisSig > otherSig):
+            otherMag = otherMag.shiftLeft()
+            otherSig += 1
+
+        return LexoDecimal.make(thisMag.subtract(otherMag), thisSig)
+
     def multiply(self, other):
         return LexoDecimal.make(self.mag.multiply(other.mag), self.sig + other.sig)
 
-    # floor() {
-    #     return self.mag.shiftRight(self.sig);
-    # }
-    # ceil() {
-    #     if (self.isExact()) {
-    #         return self.mag;
-    #     }
-    #     const floor = self.floor();
-    #     return floor.add(lexoInteger_1.LexoInteger.one(floor.getSystem()));
-    # }
-    # isExact() {
-    #     if (self.sig === 0) {
-    #         return true;
-    #     }
-    #     for (let i = 0; i < self.sig; ++i) {
-    #         if (self.mag.getMag(i) !== 0) {
-    #             return false;
-    #         }
-    #     }
-    #     return true;
-    # }
+    def floor(self):
+        return self.mag.shiftRight(self.sig)
+
+    def ceil(self):
+        if self.isExact():
+            return self.mag
+
+        floor = self.floor()
+        return floor.add(LexoInteger.one(floor.getSystem()))
+
+    def isExact(self):
+        if self.sig == 0:
+            return True
+
+        for i in range(self.sig):
+            if self.mag.getMag(i) != 0:
+                return False
+
+        return True
 
     def getScale(self):
         return self.sig
@@ -188,34 +139,61 @@ class LexoDecimal(object):
 
         return LexoDecimal.make(nmag, nsig)
 
-    # compareTo(other) {
-    #     if (this === other) {
-    #         return 0;
-    #     }
-    #     if (!other) {
-    #         return 1;
-    #     }
-    #     let tMag = self.mag;
-    #     let oMag = other.mag;
-    #     if (self.sig > other.sig) {
-    #         oMag = oMag.shiftLeft(self.sig - other.sig);
-    #     }
-    #     else if (self.sig < other.sig) {
-    #         tMag = tMag.shiftLeft(other.sig - self.sig);
-    #     }
-    #     return tMag.compareTo(oMag);
-    # }
+    def compareTo(self, other):
+        if self == other:
+            return 0
 
-    # equals(other) {
-    #     if (this === other) {
-    #         return true;
-    #     }
-    #     if (!other) {
-    #         return false;
-    #     }
-    #     return self.mag.equals(other.mag) && self.sig === other.sig;
-    # }
+        if other is None:
+            return 1
 
-    # toString() {
-    #     return self.format();
-    # }
+        tMag = self.mag
+        oMag = other.mag
+
+        if self.sig > other.sig:
+            oMag = oMag.shiftLeft(self.sig - other.sig)
+
+        elif self.sig < other.sig:
+            tMag = tMag.shiftLeft(other.sig - self.sig)
+
+        return tMag.compareTo(oMag)
+
+    def format(self):
+        intStr = self.mag.format()
+        if self.sig == 0:
+            return intStr
+
+        sb = StringBuilder(intStr)
+
+        try:
+            head = sb[0]
+
+        except:
+            head = None
+
+        specialHead = head == self.mag.getSystem().getPositiveChar() or head == self.mag.getSystem().getNegativeChar()
+        if specialHead:
+            sb.remove(0, 1)
+
+        while sb.getLength() < self.sig + 1:
+            sb.insert(0, self.mag.getSystem().toChar(0))
+
+        sb.insert(sb.getLength() - self.sig, self.mag.getSystem().getRadixPointChar())
+        if sb.getLength() - self.sig == 0:
+            sb.insert(0, self.mag.getSystem().toChar(0))
+
+        if specialHead:
+            sb.insert(0, head)
+
+        return sb.toString()
+
+    def equals(self, other):
+        if self == other:
+            return True
+
+        if other is None:
+            return False
+
+        return self.mag.equals(other.mag) and self.sig == other.sig
+
+    def toString(self):
+        return self.format()

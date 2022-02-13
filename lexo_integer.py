@@ -114,7 +114,7 @@ class LexoInteger(object):
 
     @classmethod
     def _subtract(self, sys, li, r):
-        rComplement = LexoInteger.complement(sys, r, len(li))
+        rComplement = LexoInteger._complement(sys, r, len(li))
         rSum = LexoInteger._add(sys, li, rComplement)
         rSum[len(rSum) - 1] = 0
         return LexoInteger._add(sys, rSum, ONE_MAG)
@@ -142,7 +142,7 @@ class LexoInteger(object):
         return result
 
     @classmethod
-    def complement(self, sys, mag, digits):
+    def _complement(self, sys, mag, digits):
         if digits <= 0:
             raise ValidationErr('Expected at least 1 digit')
 
@@ -191,7 +191,7 @@ class LexoInteger(object):
             pos = other.negate()
             return self.subtract(pos)
 
-        result = LexoInteger.add(self.sys, self.mag, other.mag)
+        result = LexoInteger._add(self.sys, self.mag, other.mag)
         return LexoInteger.make(self.sys, self.sign, result)
 
     def subtract(self, other):
@@ -238,8 +238,20 @@ class LexoInteger(object):
     def negate(self):
         return self if self.isZero() else LexoInteger.make(self.sys, -1 if self.sign == 1 else 1, self.mag)
 
+    def shiftLeft(self, times=1):
+        if times == 0:
+            return self
+
+        if times < 0:
+            return self.shiftRight(abs(times))
+
+        nmag = [0] * (len(self.mag) + times)
+
+        arrayCopy(self.mag, 0, nmag, times, len(self.mag))
+        return LexoInteger.make(self.sys, self.sign, nmag)
+
     def shiftRight(self, times=1):
-        if len(self.mag) - times <= 0:
+        if (len(self.mag) - times) <= 0:
             return LexoInteger.zero(self.sys)
 
         nmag = [0] * (len(self.mag) - times)
@@ -247,8 +259,17 @@ class LexoInteger(object):
         arrayCopy(self.mag, times, nmag, 0, len(nmag))
         return self.make(self.sys, self.sign, nmag)
 
+    def complement(self):
+        return self.complementDigits(len(self.mag))
+
+    def complementDigits(self, digits):
+        return LexoInteger.make(self.sys, self.sign, LexoInteger._complement(self.sys, self.mag, digits))
+
     def isZero(self):
         return self.sign == 0 and len(self.mag) == 1 and self.mag[0] == 0
+
+    def isOne(self):
+        return self.sign == 1 and len(self.mag) == 1 and self.mag[0] == 1
 
     def getMag(self, index):
         return self.mag[index]
@@ -291,12 +312,24 @@ class LexoInteger(object):
 
         for var4 in range(var3):
             digit = var2[var4]
-            sb.insert(0, self.sys.toChar(digit))
+            sb.insert(0, self.sys.toChar(int(digit)))
 
         if self.sign == -1:
             sb.insert(0, self.sys.getNegativeChar())
 
         return sb.toString()
+
+    def equals(self, other):
+        if self == other:
+            return True
+
+        if other is None:
+            return False
+
+        return self.sys.getBase() == other.sys.getBase() and self.compareTo(other) == 0
+
+    def toString(self):
+        return self.format()
 
     def isOneish(self):
         return len(self.mag) == 1 and self.mag[0] == 1

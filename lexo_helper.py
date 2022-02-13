@@ -16,7 +16,6 @@ def arrayCopy(
     i = sourceIndex
     while(i < finalLength):
         destinationArray[destination] = sourceArray[i]
-        i += 1
         destination += 1
 
-    logger.info("--")
+        i += 1
